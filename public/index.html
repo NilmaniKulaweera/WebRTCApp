@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<head>
+    <title>WebRTC Training</title>
+</head>
+<body>
+    <h1>WEBRTC TRAINING</h1>
+    <div id="selectRoom">
+        <label>Type room name</label>
+        <input id="roomNumber" type="text"/>
+        <button id="goRoom">Go</button>
+    </div>
+    <div id="consultingRoom" style="display:none">
+        <!-- autoplay - to be able to see the stream to be showing automatically -->
+        <video id="localVideo" autoplay></video>  
+        <video id="remoteVideo" autoplay></video>
+    </div>
+    <!-- reference to the socket io engine -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="main.js"></script>
+</body>
