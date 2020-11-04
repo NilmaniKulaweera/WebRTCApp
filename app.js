@@ -19,7 +19,7 @@ io.on('connection', socket => {
     // create our listeners
     socket.on('create or join', room => {
         console.log('create or join to room', room);
-        const myRoom = io.sockets.adapter.rooms[room] || {length: 0}; // if the room is not existing
+        const myRoom = io.sockets.adapter.rooms[room] || {length: 0}; // if the room is not existing to make sure we receive a proper value
         const numClients = myRoom.length;
         console.log(room, 'has', numClients, 'clients');
 
@@ -50,5 +50,5 @@ io.on('connection', socket => {
     socket.on('answer', event => {
         socket.broadcast.to(event.room).emit('answer', event.sdp);
     });
-})
+});
 
