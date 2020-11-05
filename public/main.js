@@ -4,8 +4,11 @@ let inputRoomNumber = document.getElementById("roomNumber");
 let btnGoRoom = document.getElementById("goRoom");
 let localVideo = document.getElementById("localVideo");
 let remoteVideo = document.getElementById("remoteVideo");
+let h2CallName = document.getElementById("callName");
+let inputCallName = document.getElementById("inputCallName");
+let btnSetName = document.getElementById("setName");
 
-let roomNumber, localStream, remoteStream, rtcPeerConnection, isCaller  // isCaller - helper variable to define who is making the call
+let roomNumber, localStream, remoteStream, rtcPeerConnection, isCaller, dataChannel // isCaller - helper variable to define who is making the call
 
 const iceServers = {
     'iceServer': [
@@ -30,6 +33,17 @@ btnGoRoom.onclick = () => {
         socket.emit('create or join', roomNumber); // sends a create or join message to the signalling server 
         divSelectRoom.style = "display: none";
         divConsultingRoom.style = "display: block";
+    }
+}
+
+// event for sending the call name
+btnSetName.onclick = () => {
+    if (inputCallName.value === '') {
+        alert ("please type a call name");
+    } else {
+        // send the name the user has written through the data channel
+        dataChannel.send(inputCallName.value);
+        h2CallName.innerHTML = inputCallName.value;
     }
 }
 
@@ -62,11 +76,15 @@ socket.on('joined', room => {
 // second user has joined the call and has notified the signalling server that it's ready to begin with the offer and answer process
 socket.on('ready', () => {
     if (isCaller) { // makesure the person receiving this event is the caller
-        rtcPeerConnection = new RTCPeerConnection(iceServers);
-        rtcPeerConnection.onicecandidate = onIceCandidate;
-        rtcPeerConnection.ontrack = onAddStream;
+        rtcPeerConnection = new RTCPeerConnection(iceServers); // you don't need this if the two peers are in the same network
+        rtcPeerConnection.onicecandidate = onIceCandidate; // whenever an ice candidate is created or found this event is triggered
+        rtcPeerConnection.ontrack = onAddStream; // any time rtcPeerCoonection receives a remote stream it will trigger this event
         rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream); // add the stream of media devices to our peer connection (audio and video tracks)
         rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream); 
+
+        dataChannel = rtcPeerConnection.createDataChannel(roomNumber); // create the data channel
+        dataChannel.onmessage = event => { h2CallName.innerHTML = event.data} // when we get the msg through the data channel this is what we are going to do
+
         rtcPeerConnection.createOffer()
             .then(sessionDescription => { // session description will have all the information about codecs, etc
                 console.log('sending offer', sessionDescription);
@@ -87,12 +105,18 @@ socket.on('ready', () => {
 socket.on('offer', (event) => {
     if (!isCaller) { 
         rtcPeerConnection = new RTCPeerConnection(iceServers);
-        rtcPeerConnection.onicecandidate = onIceCandidate; // whenever an ice candidate is found this event is triggered
-        rtcPeerConnection.ontrack = onAddStream; // any time rtcPeerCoonection reveives a remote stream it will trigger this event
+        rtcPeerConnection.onicecandidate = onIceCandidate; // whenever an ice candidate is created or found this event is triggered
+        rtcPeerConnection.ontrack = onAddStream; // any time rtcPeerCoonection receives a remote stream it will trigger this event
         rtcPeerConnection.addTrack(localStream.getTracks()[0], localStream); // add the stream of media devices to our peer connection (audio and video tracks)
         rtcPeerConnection.addTrack(localStream.getTracks()[1], localStream); 
         console.log('received offer', event);
         rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(event));
+        
+        rtcPeerConnection.ondatachannel = event => {
+            dataChannel = event.channel; // set the data channel to the received channel
+            dataChannel.onmessage = event => { h2CallName.innerHTML = event.data} // when we get the msg through the data channel this is what we are going to do
+        }
+
         rtcPeerConnection.createAnswer()
             .then(sessionDescription => {
                 console.log('sending answer', sessionDescription);
